@@ -1,55 +1,64 @@
-#include <iostream>
-#include <vector>
 #include <omp.h>
+#include <iostream>
+#include <chrono>
 using namespace std;
-long parallelSum(const vector<int>& arr) {
-    long sum = 0;
-    #pragma omp parallel for reduction(+:sum)
-    for (size_t i = 0; i < arr.size(); ++i) {
-        sum += arr[i];
-    }
-    return sum;
+using namespace chrono;
+
+void displayArray(int nums[], int length) {
+    cout << "Nums: [";
+    for (int i = 0; i < length; i++)
+        cout << nums[i] << (i != length - 1 ? ", " : "");
+    cout << "]\n";
 }
-int parallelMax(const vector<int>& arr) {
-    int max_val = arr[0];
-    #pragma omp parallel for reduction(max:max_val)
-    for (size_t i = 1; i < arr.size(); ++i) {
-        if (arr[i] > max_val) {
-            max_val = arr[i];
-        }
-    }
-    return max_val;
+
+void minOperation(int nums[], int length) {
+    int minValue = nums[0];
+#pragma omp parallel for reduction(min:minValue)
+    for (int i = 0; i < length; i++)
+        if (nums[i] < minValue) minValue = nums[i];
+    cout << "Min value: " << minValue << endl;
 }
-int parallelMin(const vector<int>& arr) {
-    int min_val = arr[0];
-    #pragma omp parallel for reduction(min:min_val)
-    for (size_t i = 1; i < arr.size(); ++i) {
-        if (arr[i] < min_val) {
-            min_val = arr[i];
-        }
-    }
-    return min_val;
+
+void maxOperation(int nums[], int length) {
+    int maxValue = nums[0];
+#pragma omp parallel for reduction(max:maxValue)
+    for (int i = 0; i < length; i++)
+        if (nums[i] > maxValue) maxValue = nums[i];
+    cout << "Max value: " << maxValue << endl;
 }
-double parallelAverage(const vector<int>& arr) {
-    long sum = parallelSum(arr); 
-    return static_cast<double>(sum) / arr.size();
-}
-int main() {
-    int n;
-    cout << "Enter the number of elements: ";
-    cin >> n;
-    vector<int> arr(n);
-    cout << "Enter the elements: ";
-    for (int i = 0; i < n; i++) {
-        cin >> arr[i];
-    }
-    long sum = parallelSum(arr);
-    int max_val = parallelMax(arr);
-    int min_val = parallelMin(arr);
-    double average = parallelAverage(arr);
+
+void sumOperation(int nums[], int length) {
+    int sum = 0;
+#pragma omp parallel for reduction(+:sum)
+    for (int i = 0; i < length; i++)
+        sum += nums[i];
     cout << "Sum: " << sum << endl;
-    cout << "Max: " << max_val << endl;
-    cout << "Min: " << min_val << endl;
-    cout << "Average: " << average << endl;
+}
+
+void avgOperation(int nums[], int length) {
+    float sum = 0;
+#pragma omp parallel for reduction(+:sum)
+    for (int i = 0; i < length; i++)
+        sum += nums[i];
+    cout << "Average: " << (sum / length) << endl;
+}
+
+int main() {
+    int length;
+    cout << "Enter number of elements: ";
+    cin >> length;
+    int* nums = new int[length];
+    cout << "Enter " << length << " integers:\n";
+    for (int i = 0; i < length; i++)
+        cin >> nums[i];
+    auto start = high_resolution_clock::now();
+    displayArray(nums, length);
+    minOperation(nums, length);
+    maxOperation(nums, length);
+    sumOperation(nums, length);
+    avgOperation(nums, length);
+    auto stop = high_resolution_clock::now();
+    cout << "\nExecution time: " << duration_cast<microseconds>(stop - start).count() << " ms\n";
+    delete[] nums;
     return 0;
 }
