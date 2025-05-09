@@ -58,7 +58,7 @@ int main() {
     sumOperation(nums, length);
     avgOperation(nums, length);
     auto stop = high_resolution_clock::now();
-    cout << "\nExecution time: " << duration_cast<microseconds>(stop - start).count() << " ms\n";
+    cout << "\nExecution time: " << duration_cast<milliseconds>(stop - start).count() << " ms\n";
     delete[] nums;
     return 0;
 }
