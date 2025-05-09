@@ -1,152 +1,104 @@
+#include <omp.h>
 #include <iostream>
-#include <vector>
-#include <unordered_map>
-#include <unordered_set>
 #include <queue>
-#include <thread>
-#include <future>
-#include <atomic>
+#include <vector>
+#include <chrono>
 using namespace std;
-class Graph {
-private:
-    unordered_map<int, vector<int>> adjList;
+using namespace chrono;
+
+class Node
+{
 public:
-    void addEdge(int u, int v) {
-        adjList[u].push_back(v);
-        adjList[v].push_back(u);
-    }
-    vector<int> getNeighbors(int u) {
-        if (adjList.find(u) != adjList.end()) {
-            return adjList[u];
-        }
-        return {};
-    }
-    void printGraph() {
-        cout << "\nGraph Structure:" << endl;
-        for (auto& entry : adjList) {
-            cout << entry.first << " -> ";
-            for (int neighbor : entry.second) {
-                cout << neighbor << " ";
-            }
-            cout << endl;
-        }
-    }
+    int value;
+    Node *left, *right;
+    Node(int v) : value(v), left(NULL), right(NULL) {}
 };
-vector<int> parallelBFS(Graph& graph, int start) {
-    unordered_set<int> visited;
-    queue<int> q;
-    vector<int> bfsTraversal;
-    atomic<bool> done(false);
-    q.push(start);
-    visited.insert(start);
-    while (!q.empty()) {
-        int levelSize = q.size();
-        vector<future<void>> futures;
-        for (int i = 0; i < levelSize; i++) {
-            int currentNode = q.front();
+
+Node *generateTree(vector<int> &values)
+{
+    if (values.empty())
+        return NULL;
+    vector<Node *> nodes(values.size());
+    for (int i = 0; i < values.size(); i++)
+        nodes[i] = new Node(values[i]);
+    int parent = 0, child = 1;
+    while (child < values.size())
+    {
+        if (nodes[parent])
+        {
+            nodes[parent]->left = (child < values.size()) ? nodes[child++] : NULL;
+            nodes[parent]->right = (child < values.size()) ? nodes[child++] : NULL;
+        }
+        parent++;
+    }
+    return nodes[0];
+}
+
+void parallel_bfs(Node *root)
+{
+    if (!root)
+        return;
+    queue<Node *> q;
+    q.push(root);
+    while (!q.empty())
+    {
+        int size = q.size();
+        vector<Node *> level;
+        for (int i = 0; i < size; i++)
+        {
+            level.push_back(q.front());
             q.pop();
-            bfsTraversal.push_back(currentNode);
-            futures.push_back(async(launch::async, [&]() {
-                for (int neighbor : graph.getNeighbors(currentNode)) {
-                    if (visited.find(neighbor) == visited.end()) {
-                        visited.insert(neighbor);
-                        q.push(neighbor);
-                    }
-                }
-            }));
         }
-        for (auto& fut : futures) {
-            fut.get();
+#pragma omp parallel for
+        for (int i = 0; i < level.size(); i++)
+        {
+#pragma omp critical
+            cout << level[i]->value << " -> ";
         }
-    }
-    return bfsTraversal;
-}
-void dfsRecursive(Graph& graph, int node, unordered_set<int>& visited, vector<int>& dfsTraversal) {
-    visited.insert(node);
-    dfsTraversal.push_back(node);
-    vector<int> neighbors = graph.getNeighbors(node);
-    vector<future<void>> futures;
-    for (int neighbor : neighbors) {
-        if (visited.find(neighbor) == visited.end()) {
-            futures.push_back(async(launch::async, [&]() {
-                dfsRecursive(graph, neighbor, visited, dfsTraversal);
-            }));
+        for (auto node : level)
+        {
+            if (node->left)
+                q.push(node->left);
+            if (node->right)
+                q.push(node->right);
         }
-    }
-    for (auto& fut : futures) {
-        fut.get();
     }
 }
-vector<int> parallelDFS(Graph& graph, int start) {
-    unordered_set<int> visited;
-    vector<int> dfsTraversal;
-    dfsRecursive(graph, start, visited, dfsTraversal);   
-    return dfsTraversal;
+
+void parallel_dfs(Node *root)
+{
+    if (!root)
+        return;
+#pragma omp critical
+    cout << root->value << " -> ";
+#pragma omp parallel sections
+    {
+#pragma omp section
+        parallel_dfs(root->left);
+#pragma omp section
+        parallel_dfs(root->right);
+    }
 }
-void printTraversalAsTree(const vector<int>& traversal, const string& traversalType) {
-    cout << "\n" << traversalType << " Traversal Output: " << endl;
-    for (int node : traversal) {
-        cout << node << " ";
-    }
-    cout << endl;
-}
-int main() {
-    Graph graph;
-    int numEdges;
-    cout << "Enter the number of edges you want to add to the graph:" << endl;
-    cin >> numEdges;
-    cout << "Enter edges as pairs of nodes (e.g., 0 1 for an edge between 0 and 1): " << endl;
-    for (int i = 0; i < numEdges; i++) {
-        int u, v;
-        cin >> u >> v;
-        graph.addEdge(u, v);
-    }
-    graph.printGraph();
-    bool continueRunning = true;
-    while (continueRunning) {
-        cout << "\nChoose an option: " << endl;
-        cout << "1. Parallel BFS" << endl;
-        cout << "2. Parallel DFS" << endl;
-        cout << "3. Exit" << endl;
-        cout << "Enter your choice: ";
-        int choice;
-        cin >> choice;
-        switch (choice) {
-            case 1: {
-                cout << "Enter starting node for BFS: ";
-                int startBFS;
-                cin >> startBFS;
-                cout << "\nRunning Parallel BFS..." << endl;
-                vector<int> bfsTraversal = parallelBFS(graph, startBFS);
-                printTraversalAsTree(bfsTraversal, "BFS");
-                break;
-            }
-            case 2: {
-                cout << "Enter starting node for DFS: ";
-                int startDFS;
-                cin >> startDFS;
-                cout << "\nRunning Parallel DFS..." << endl;
-                vector<int> dfsTraversal = parallelDFS(graph, startDFS);
-                printTraversalAsTree(dfsTraversal, "DFS");
-                break;
-            }
-            case 3:
-                continueRunning = false;
-                cout << "Exited the program successfully" << endl;
-                break;
-            default:
-                cout << "Invalid choice! Please choose a valid option." << endl;
-                break;
-        }
-        if (continueRunning) {
-            cout << "\nDo you want to continue? (yes/no): ";
-            string userChoice;
-            cin >> userChoice;
-            if (userChoice == "no" || userChoice == "No") {
-                continueRunning = false;
-                cout << "Exited the program successfully" << endl;
-            }
-        }
-    }
+
+int main()
+{
+    int n;
+    cout << "Enter number of nodes (in space separated form): ";
+    cin >> n;
+    vector<int> values(n);
+    cout << "Enter " << n << " node values:\n";
+    for (int i = 0; i < n; i++)
+        cin >> values[i];
+    Node *root = generateTree(values);
+    auto start_bfs = high_resolution_clock::now();
+    cout << "\nParallel BFS: ";
+    parallel_bfs(root);
+    auto stop_bfs = high_resolution_clock::now();
+    cout << "\nExecution time for Parallel BFS: " << duration_cast<milliseconds>(stop_bfs - start_bfs).count() << " ms\n\n";
+    auto start_dfs = high_resolution_clock::now();
+    cout << "Parallel DFS: ";
+    parallel_dfs(root);
+    auto stop_dfs = high_resolution_clock::now();
+    cout << "\nExecution time for Parallel DFS: " << duration_cast<milliseconds>(stop_dfs - start_dfs).count() << " ms\n";
     return 0;
 }
