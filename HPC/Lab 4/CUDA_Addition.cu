@@ -22,7 +22,7 @@ int main() {
     cudaMalloc(&d_B, size);
     cudaMalloc(&d_C, size);
 
-    srand(time(0));
+    srand(time(NULL));
     for (int i = 1; i < N; i++) {
         A[i] = rand() % 100;  
         B[i] = rand() % 100;  
@@ -53,7 +53,7 @@ int main() {
     }
     std::cout << std::endl;
 
-    std::cout << "Calculations of A[i] + B[i] = C[i]: " << std::endl;
+    std::cout << "Calculations of Matrix C: " << std::endl;
     for (int i = 1; i < N; i++) {
         std::cout << "C[" << i << "] = " << A[i] << " + " << B[i] << " = " << C[i] << std::endl;
     }
