@@ -10,7 +10,7 @@ __global__ void vectorAdd(int *A, int *B, int *C, int N) {
 }
 
 int main() {
-    int N = 11;  
+    int N = 10;  
     size_t size = N * sizeof(int);  
     int *A, *B, *C, *d_A, *d_B, *d_C;
 
@@ -23,7 +23,7 @@ int main() {
     cudaMalloc(&d_C, size);
 
     srand(time(NULL));
-    for (int i = 1; i < N; i++) {
+    for (int i = 0; i < N; i++) {
         A[i] = rand() % 100;  
         B[i] = rand() % 100;  
     }
@@ -36,25 +36,25 @@ int main() {
     cudaMemcpy(C, d_C, size, cudaMemcpyDeviceToHost);
 
     std::cout << "Vector A: ";
-    for (int i = 1; i < N; i++) {
+    for (int i = 0; i < N; i++) {
         std::cout << A[i] << " ";  
     }
     std::cout << std::endl;
 
     std::cout << "Vector B: ";
-    for (int i = 1; i < N; i++) {
+    for (int i = 0; i < N; i++) {
         std::cout << B[i] << " ";  
     }
     std::cout << std::endl;
 
     std::cout << "Result Vector C: ";
-    for (int i = 1; i < N; i++) {
+    for (int i = 0; i < N; i++) {
         std::cout << C[i] << " ";  
     }
     std::cout << std::endl;
 
     std::cout << "Calculations of Matrix C: " << std::endl;
-    for (int i = 1; i < N; i++) {
+    for (int i = 0; i < N; i++) {
         std::cout << "C[" << i << "] = " << A[i] << " + " << B[i] << " = " << C[i] << std::endl;
     }
 
